@@ -122,6 +122,18 @@
       </widget>
      </item>
      <item>
+      <widget class="QGroupBox" name="themeGroup">
+       <property name="title">
+        <string>Theme</string>
+       </property>
+       <layout class="QVBoxLayout" name="chartLayout">
+        <item>
+         <widget class="QComboBox" name="themeComboBox" />
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
       <spacer name="verticalSpacer">
        <property name="orientation">
         <enum>Qt::Vertical</enum>

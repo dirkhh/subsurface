@@ -84,6 +84,7 @@ StatsWidget::StatsWidget(QWidget *parent) : QWidget(parent)
 	connect(ui.var1Binner, QOverload<int>::of(&QComboBox::activated), this, &StatsWidget::var1BinnerChanged);
 	connect(ui.var2Binner, QOverload<int>::of(&QComboBox::activated), this, &StatsWidget::var2BinnerChanged);
 	connect(ui.var2Operation, QOverload<int>::of(&QComboBox::activated), this, &StatsWidget::var2OperationChanged);
+	connect(ui.themeComboBox, QOverload<int>::of(&QComboBox::activated), this, &StatsWidget::themeChanged);
 	connect(ui.restrictButton, &QToolButton::clicked, this, &StatsWidget::restrict);
 	connect(ui.unrestrictButton, &QToolButton::clicked, this, &StatsWidget::unrestrict);
 
@@ -93,6 +94,8 @@ StatsWidget::StatsWidget(QWidget *parent) : QWidget(parent)
 	view = qobject_cast<StatsView *>(root);
 	if (!view)
 		qWarning("Oops. The root of the StatsView is not a StatsView.");
+	if (view)
+		ui.themeComboBox->addItems(view->getThemes());
 }
 
 // Initialize QComboBox with list of variables
@@ -202,6 +205,14 @@ void StatsWidget::featureChanged(int idx, bool status)
 	// No need for a full chart replot - just show/hide the features
 	if (view)
 		view->updateFeatures(state);
+}
+
+void StatsWidget::themeChanged(int idx)
+{
+	if (view) {
+		view->setTheme(idx);
+		view->plot(state);
+	}
 }
 
 void StatsWidget::showEvent(QShowEvent *e)

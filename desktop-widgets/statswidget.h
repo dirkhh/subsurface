@@ -25,6 +25,7 @@ slots:
 	void var2BinnerChanged(int);
 	void var2OperationChanged(int);
 	void featureChanged(int, bool);
+	void themeChanged(int);
 	void restrict();
 	void unrestrict();
 private:
