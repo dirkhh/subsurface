@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 #include "printer.h"
-#include "mainwindow.h"
 #include "templatelayout.h"
 #include "core/statistics.h"
 #include "core/qthelper.h"
-#include "core/settings/qPrefDisplay.h"
 
 #include <algorithm>
 #include <QPainter>
@@ -38,30 +36,10 @@ void Printer::putProfileImage(const QRect &profilePlaceholder, const QRect &view
 	int y = profilePlaceholder.y() - viewPort.y();
 	// use the placeHolder and the viewPort position to calculate the relative position of the dive profile.
 	QRect pos(x, y, profilePlaceholder.width(), profilePlaceholder.height());
+
+	profile->setProfileState(dive, 0);
 	profile->plotDive(dive, 0, true);
-
-	if (!printOptions.color_selected) {
-		QImage image(pos.width(), pos.height(), QImage::Format_ARGB32);
-		QPainter imgPainter(&image);
-		imgPainter.setRenderHint(QPainter::Antialiasing);
-		imgPainter.setRenderHint(QPainter::SmoothPixmapTransform);
-		profile->render(&imgPainter, QRect(0, 0, pos.width(), pos.height()));
-		imgPainter.end();
-
-		// convert QImage to grayscale before rendering
-		for (int i = 0; i < image.height(); i++) {
-			QRgb *pixel = reinterpret_cast<QRgb *>(image.scanLine(i));
-			QRgb *end = pixel + image.width();
-			for (; pixel != end; pixel++) {
-				int gray_val = qGray(*pixel);
-				*pixel = QColor(gray_val, gray_val, gray_val).rgb();
-			}
-		}
-
-		painter->drawImage(pos, image);
-	} else {
-		profile->render(painter, pos);
-	}
+	profile->draw(painter, pos);
 }
 
 void Printer::flowRender()
@@ -125,16 +103,18 @@ void Printer::flowRender()
 
 void Printer::render(int pages)
 {
-	// keep original preferences
-	ProfileWidget2 *profile = MainWindow::instance()->graphics;
-	int profileFrameStyle = profile->frameStyle();
-	double fontScale = profile->getFontPrintScale();
-	double printFontScale = 1.0;
+	// get all refereces to diveprofile class in the Html template
+	QWebElementCollection collection = webView->page()->mainFrame()->findAllElements(".diveprofile");
+
+	// A "standard" profile has about 600 pixels in height.
+	// Scale the fonts in the printed profile accordingly.
+	// This is arbitrary, but it seems to work reasonably well.
+	double printFontScale = collection.count() > 0 ? collection[0].geometry().size().height() / 600.0 : 1.0;
+	auto profile = std::make_unique<ProfileWidget2>(nullptr, printFontScale, nullptr);
 
 	// apply printing settings to profile
 	profile->setFrameStyle(QFrame::NoFrame);
 	profile->setPrintMode(true, !printOptions.color_selected);
-	profile->setToolTipVisibile(false);
 
 	// render the Qwebview
 	QPainter painter;
@@ -142,20 +122,6 @@ void Printer::render(int pages)
 	painter.begin(paintDevice);
 	painter.setRenderHint(QPainter::Antialiasing);
 	painter.setRenderHint(QPainter::SmoothPixmapTransform);
-
-	// get all refereces to diveprofile class in the Html template
-	QWebElementCollection collection = webView->page()->mainFrame()->findAllElements(".diveprofile");
-
-	QSize originalSize = profile->size();
-	if (collection.count() > 0) {
-		// A "standard" profile has about 600 pixels in height.
-		// Scale the fonts in the printed profile accordingly.
-		// This is arbitrary, but it seems to work reasonably.
-		QSize size = collection[0].geometry().size();
-		printFontScale = size.height() / 600.0;
-		profile->resize(size);
-	}
-	profile->setFontPrintScale(printFontScale);
 
 	int elemNo = 0;
 	for (int i = 0; i < pages; i++) {
@@ -167,7 +133,7 @@ void Printer::render(int pages)
 			// dive id field should be dive_{{dive_no}} se we remove the first 5 characters
 			QString diveIdString = collection.at(elemNo).attribute("id");
 			int diveId = diveIdString.remove(0, 5).toInt(0, 10);
-			putProfileImage(collection.at(elemNo).geometry(), viewPort, &painter, get_dive_by_uniq_id(diveId), profile);
+			putProfileImage(collection.at(elemNo).geometry(), viewPort, &painter, get_dive_by_uniq_id(diveId), profile.get());
 			elemNo++;
 		}
 
@@ -181,16 +147,6 @@ void Printer::render(int pages)
 			static_cast<QPrinter*>(paintDevice)->newPage();
 	}
 	painter.end();
-
-	// return profle settings
-	profile->setFrameStyle(profileFrameStyle);
-	profile->setPrintMode(false);
-	profile->setFontPrintScale(fontScale);
-	profile->setToolTipVisibile(true);
-	profile->resize(originalSize);
-
-	//replot the dive after returning the settings
-	profile->plotDive(current_dive, dc_number, true);
 }
 
 //value: ranges from 0 : 100 and shows the progress of the templating engine

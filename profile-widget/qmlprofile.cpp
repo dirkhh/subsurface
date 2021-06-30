@@ -15,18 +15,22 @@ QMLProfile::QMLProfile(QQuickItem *parent) :
 	m_devicePixelRatio(1.0),
 	m_margin(0),
 	m_xOffset(0.0),
-	m_yOffset(0.0),
-	m_profileWidget(new ProfileWidget2(nullptr, nullptr))
+	m_yOffset(0.0)
 {
+	createProfileView();
 	setAntialiasing(true);
 	setFlags(QQuickItem::ItemClipsChildrenToShape | QQuickItem::ItemHasContents );
-	m_profileWidget->setProfileState(nullptr, 0);
-	m_profileWidget->setPrintMode(true);
-	m_profileWidget->setFontPrintScale(fontScale);
 	connect(QMLManager::instance(), &QMLManager::sendScreenChanged, this, &QMLProfile::screenChanged);
 	connect(this, &QMLProfile::scaleChanged, this, &QMLProfile::triggerUpdate);
 	connect(&diveListNotifier, &DiveListNotifier::divesChanged, this, &QMLProfile::divesChanged);
 	setDevicePixelRatio(QMLManager::instance()->lastDevicePixelRatio());
+}
+
+void QMLProfile::createProfileView()
+{
+	m_profileWidget.reset(new ProfileWidget2(nullptr, fontScale * m_devicePixelRatio, nullptr));
+	m_profileWidget->setProfileState(nullptr, 0);
+	m_profileWidget->setPrintMode(true);
 }
 
 // we need this so we can connect update() to the scaleChanged() signal - which the connect above cannot do
@@ -155,7 +159,8 @@ void QMLProfile::setDevicePixelRatio(qreal dpr)
 {
 	if (dpr != m_devicePixelRatio) {
 		m_devicePixelRatio = dpr;
-		m_profileWidget->setFontPrintScale(fontScale * dpr);
+		// Recreate the view to redraw the text items with the new scale.
+		createProfileView();
 		updateDevicePixelRatio(dpr);
 		emit devicePixelRatioChanged();
 	}

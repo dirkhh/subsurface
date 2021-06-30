@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-#include <QFileInfo>
-#include <QDir>
-#include <QtConcurrent>
+#include "exportfuncs.h"
 #include "core/membuffer.h"
 #include "core/dive.h"
 #include "core/divesite.h"
@@ -16,7 +14,11 @@
 #include "core/pref.h"
 #include "core/sample.h"
 #include "core/selection.h"
-#include "exportfuncs.h"
+#include "core/sample.h"
+#include "profile-widget/profilewidget2.h"
+#include <QDir>
+#include <QFileInfo>
+#include <QtConcurrent>
 
 // Default implementation of the export callback: do nothing / never cancel
 void ExportCallback::setProgress(int)
@@ -29,6 +31,30 @@ bool ExportCallback::canceled() const
 }
 
 #if !defined(SUBSURFACE_MOBILE)
+
+// Let's say that 800x600 is a "reasonable" profile size. Use four times that for printing.
+static const constexpr int profileScale = 4;
+static const constexpr int profileWidth = 800 * profileScale;
+static const constexpr int profileHeight = 600 * profileScale;
+
+static void exportProfile(ProfileWidget2 *profile, const struct dive *dive, const QString &filename)
+{
+	profile->setProfileState(dive, 0);
+	profile->plotDive(dive, 0, false, true);
+	QImage image = QImage(QSize(profileWidth, profileHeight), QImage::Format_RGB32);
+	QPainter paint;
+	paint.begin(&image);
+	profile->draw(&paint, QRect(0, 0, profileWidth, profileHeight));
+	image.save(filename);
+}
+
+static std::unique_ptr<ProfileWidget2> getPrintProfile()
+{
+	auto profile = std::make_unique<ProfileWidget2>(nullptr, (double)profileScale, nullptr);
+	profile->setPrintMode(true);
+	return profile;
+}
+
 void exportProfile(QString filename, bool selected_only, ExportCallback &cb)
 {
 	struct dive *dive;
@@ -40,16 +66,16 @@ void exportProfile(QString filename, bool selected_only, ExportCallback &cb)
 
 	int todo = selected_only ? amount_selected : dive_table.nr;
 	int done = 0;
+	auto profile = getPrintProfile();
 	for_each_dive (i, dive) {
 		if (cb.canceled())
 			return;
 		if (selected_only && !dive->selected)
 			continue;
 		cb.setProgress(done++ * 1000 / todo);
-		if (count)
-			exportProfile(dive, fi.path() + QDir::separator() + fi.completeBaseName().append(QString("-%1.").arg(count)) + fi.suffix());
-		else
-			exportProfile(dive, filename);
+		QString fn = count ? fi.path() + QDir::separator() + fi.completeBaseName().append(QString("-%1.").arg(count)) + fi.suffix()
+				   : filename;
+		exportProfile(profile.get(), dive, fn);
 		++count;
 	}
 }
@@ -109,13 +135,14 @@ void export_TeX(const char *filename, bool selected_only, bool plain, ExportCall
 
 	int todo = selected_only ? amount_selected : dive_table.nr;
 	int done = 0;
+	auto profile = getPrintProfile();
 	for_each_dive (i, dive) {
 		if (cb.canceled())
 			return;
 		if (selected_only && !dive->selected)
 			continue;
 		cb.setProgress(done++ * 1000 / todo);
-		exportProfile(dive, texdir.filePath(QString("profile%1.png").arg(dive->number)));
+		exportProfile(profile.get(), dive, texdir.filePath(QString("profile%1.png").arg(dive->number)));
 		struct tm tm;
 		utc_mkdate(dive->when, &tm);
 

@@ -95,7 +95,7 @@ T *ProfileWidget2::createItem(const DiveCartesianAxis &vAxis, int vColumn, int z
 	return res;
 }
 
-ProfileWidget2::ProfileWidget2(DivePlannerPointsModel *plannerModelIn, QWidget *parent) : QGraphicsView(parent),
+ProfileWidget2::ProfileWidget2(DivePlannerPointsModel *plannerModelIn, double fontPrintScale, QWidget *parent) : QGraphicsView(parent),
 	currentState(INVALID),
 	dataModel(new DivePlotDataModel(this)),
 	plannerModel(plannerModelIn),
@@ -108,17 +108,17 @@ ProfileWidget2::ProfileWidget2(DivePlannerPointsModel *plannerModelIn, QWidget *
 #ifndef SUBSURFACE_MOBILE
 	toolTipItem(new ToolTipItem()),
 #endif
-	profileYAxis(new DepthAxis(this)),
-	gasYAxis(new PartialGasPressureAxis(*dataModel, this)),
-	temperatureAxis(new TemperatureAxis(this)),
-	timeAxis(new TimeAxis(this)),
-	diveProfileItem(createItem<DiveProfileItem>(*profileYAxis, DivePlotDataModel::DEPTH, 0)),
-	temperatureItem(createItem<DiveTemperatureItem>(*temperatureAxis, DivePlotDataModel::TEMPERATURE, 1)),
-	meanDepthItem(createItem<DiveMeanDepthItem>(*profileYAxis, DivePlotDataModel::INSTANT_MEANDEPTH, 1)),
-	cylinderPressureAxis(new DiveCartesianAxis(this)),
-	gasPressureItem(createItem<DiveGasPressureItem>(*cylinderPressureAxis, DivePlotDataModel::TEMPERATURE, 1)),
-	diveComputerText(new DiveTextItem()),
-	reportedCeiling(createItem<DiveReportedCeiling>(*profileYAxis, DivePlotDataModel::CEILING, 1)),
+	profileYAxis(new DepthAxis(fontPrintScale, this)),
+	gasYAxis(new PartialGasPressureAxis(*dataModel, fontPrintScale, this)),
+	temperatureAxis(new TemperatureAxis(fontPrintScale, this)),
+	timeAxis(new TimeAxis(fontPrintScale, this)),
+	diveProfileItem(createItem<DiveProfileItem>(*profileYAxis, DivePlotDataModel::DEPTH, 0, fontPrintScale)),
+	temperatureItem(createItem<DiveTemperatureItem>(*temperatureAxis, DivePlotDataModel::TEMPERATURE, 1, fontPrintScale)),
+	meanDepthItem(createItem<DiveMeanDepthItem>(*profileYAxis, DivePlotDataModel::INSTANT_MEANDEPTH, 1, fontPrintScale)),
+	cylinderPressureAxis(new DiveCartesianAxis(fontPrintScale, this)),
+	gasPressureItem(createItem<DiveGasPressureItem>(*cylinderPressureAxis, DivePlotDataModel::TEMPERATURE, 1, fontPrintScale)),
+	diveComputerText(new DiveTextItem(fontPrintScale)),
+	reportedCeiling(createItem<DiveReportedCeiling>(*profileYAxis, DivePlotDataModel::CEILING, 1, fontPrintScale)),
 	pn2GasItem(createPPGas(DivePlotDataModel::PN2, PN2, PN2_ALERT, NULL, &prefs.pp_graphs.pn2_threshold)),
 	pheGasItem(createPPGas(DivePlotDataModel::PHE, PHE, PHE_ALERT, NULL, &prefs.pp_graphs.phe_threshold)),
 	po2GasItem(createPPGas(DivePlotDataModel::PO2, PO2, PO2_ALERT, &prefs.pp_graphs.po2_threshold_min, &prefs.pp_graphs.po2_threshold_max)),
@@ -127,20 +127,20 @@ ProfileWidget2::ProfileWidget2(DivePlannerPointsModel *plannerModelIn, QWidget *
 	ccrsensor2GasItem(createPPGas(DivePlotDataModel::CCRSENSOR2, CCRSENSOR2, PO2_ALERT, &prefs.pp_graphs.po2_threshold_min, &prefs.pp_graphs.po2_threshold_max)),
 	ccrsensor3GasItem(createPPGas(DivePlotDataModel::CCRSENSOR3, CCRSENSOR3, PO2_ALERT, &prefs.pp_graphs.po2_threshold_min, &prefs.pp_graphs.po2_threshold_max)),
 	ocpo2GasItem(createPPGas(DivePlotDataModel::SCR_OC_PO2, SCR_OCPO2, PO2_ALERT, &prefs.pp_graphs.po2_threshold_min, &prefs.pp_graphs.po2_threshold_max)),
-	diveCeiling(createItem<DiveCalculatedCeiling>(*profileYAxis, DivePlotDataModel::CEILING, 1, this)),
-	decoModelParameters(new DiveTextItem()),
+	diveCeiling(createItem<DiveCalculatedCeiling>(*profileYAxis, DivePlotDataModel::CEILING, 1, fontPrintScale, this)),
+	decoModelParameters(new DiveTextItem(fontPrintScale)),
 #ifndef SUBSURFACE_MOBILE
-	heartBeatAxis(new DiveCartesianAxis(this)),
-	heartBeatItem(createItem<DiveHeartrateItem>(*heartBeatAxis, DivePlotDataModel::HEARTBEAT, 1)),
-	percentageAxis(new DiveCartesianAxis(this)),
+	heartBeatAxis(new DiveCartesianAxis(fontPrintScale, this)),
+	heartBeatItem(createItem<DiveHeartrateItem>(*heartBeatAxis, DivePlotDataModel::HEARTBEAT, 1, fontPrintScale)),
+	percentageAxis(new DiveCartesianAxis(fontPrintScale, this)),
 	mouseFollowerVertical(new DiveLineItem()),
 	mouseFollowerHorizontal(new DiveLineItem()),
 	rulerItem(new RulerItem2()),
 #endif
-	tankItem(new TankItem(*timeAxis)),
+	tankItem(new TankItem(*timeAxis, fontPrintScale)),
 	shouldCalculateMaxTime(true),
 	shouldCalculateMaxDepth(true),
-	fontPrintScale(1.0)
+	fontPrintScale(fontPrintScale)
 {
 	init_plot_info(&plotInfo);
 
@@ -305,9 +305,9 @@ void ProfileWidget2::setupItemOnScene()
 	decoModelParameters->setAlignment(Qt::AlignHCenter | Qt::AlignBottom);
 #ifndef SUBSURFACE_MOBILE
 	for (int i = 0; i < 16; i++) {
-		DiveCalculatedTissue *tissueItem = createItem<DiveCalculatedTissue>(*profileYAxis, DivePlotDataModel::TISSUE_1 + i, i + 1, this);
+		DiveCalculatedTissue *tissueItem = createItem<DiveCalculatedTissue>(*profileYAxis, DivePlotDataModel::TISSUE_1 + i, i + 1, fontPrintScale, this);
 		allTissues.append(tissueItem);
-		DivePercentageItem *percentageItem = createItem<DivePercentageItem>(*percentageAxis, DivePlotDataModel::PERCENTAGE_1 + i, i + 1, i);
+		DivePercentageItem *percentageItem = createItem<DivePercentageItem>(*percentageAxis, DivePlotDataModel::PERCENTAGE_1 + i, i + 1, i, fontPrintScale);
 		allPercentages.append(percentageItem);
 	}
 #endif
@@ -348,7 +348,7 @@ void ProfileWidget2::replot()
 PartialPressureGasItem *ProfileWidget2::createPPGas(int column, color_index_t color, color_index_t colorAlert,
 						    const double *thresholdSettingsMin, const double *thresholdSettingsMax)
 {
-	PartialPressureGasItem *item = createItem<PartialPressureGasItem>(*gasYAxis, column, 99);
+	PartialPressureGasItem *item = createItem<PartialPressureGasItem>(*gasYAxis, column, 99, fontPrintScale);
 	item->setThresholdSettingsKey(thresholdSettingsMin, thresholdSettingsMax);
 	item->setColors(getColor(color, isGrayscale), getColor(colorAlert, isGrayscale));
 	return item;
@@ -1172,11 +1172,6 @@ void ProfileWidget2::setProfileState()
 }
 
 #ifndef SUBSURFACE_MOBILE
-void ProfileWidget2::setToolTipVisibile(bool visible)
-{
-	toolTipItem->setVisible(visible);
-}
-
 void ProfileWidget2::connectPlannerModel()
 {
 	connect(plannerModel, &DivePlannerPointsModel::dataChanged, this, &ProfileWidget2::replot);
@@ -1508,11 +1503,9 @@ void ProfileWidget2::addSetpointChange(int seconds)
 
 void ProfileWidget2::splitDive(int seconds)
 {
-#ifndef SUBSURFACE_MOBILE
 	if (!d)
 		return;
 	Command::splitDives(mutable_dive(), duration_t{ seconds });
-#endif
 }
 
 void ProfileWidget2::changeGas(int tank, int seconds)
@@ -1544,20 +1537,6 @@ void ProfileWidget2::setPrintMode(bool mode, bool grayscale)
 	mouseFollowerVertical->setVisible(!mode);
 	toolTipItem->setVisible(!mode);
 #endif
-}
-
-void ProfileWidget2::setFontPrintScale(double scale)
-{
-	fontPrintScale = scale;
-	emit fontPrintScaleChanged(scale);
-}
-
-double ProfileWidget2::getFontPrintScale() const
-{
-	if (printMode)
-		return fontPrintScale;
-	else
-		return 1.0;
 }
 
 #ifndef SUBSURFACE_MOBILE
@@ -2158,4 +2137,40 @@ void ProfileWidget2::dragMoveEvent(QDragMoveEvent *event)
 struct dive *ProfileWidget2::mutable_dive() const
 {
 	return const_cast<dive *>(d);
+}
+
+QImage ProfileWidget2::toImage(QSize size)
+{
+	// The size of chart with respect to the scene is fixed - by convention - to 100.0.
+	// We add 2% to the height so that the dive computer name is not cut off.
+	QRectF sceneRect(0.0, 0.0, 100.0, 102.0);
+
+	QImage image(size, QImage::Format_ARGB32);
+	image.fill(getColor(::BACKGROUND, isGrayscale));
+
+	QPainter imgPainter(&image);
+	imgPainter.setRenderHint(QPainter::Antialiasing);
+	imgPainter.setRenderHint(QPainter::SmoothPixmapTransform);
+	scene()->render(&imgPainter, QRect(QPoint(), size), sceneRect, Qt::IgnoreAspectRatio);
+	imgPainter.end();
+
+	if (isGrayscale) {
+		// convert QImage to grayscale before rendering
+		for (int i = 0; i < image.height(); i++) {
+			QRgb *pixel = reinterpret_cast<QRgb *>(image.scanLine(i));
+			QRgb *end = pixel + image.width();
+			for (; pixel != end; pixel++) {
+				int gray_val = qGray(*pixel);
+				*pixel = QColor(gray_val, gray_val, gray_val).rgb();
+			}
+		}
+	}
+
+	return image;
+}
+
+void ProfileWidget2::draw(QPainter *painter, const QRect &pos)
+{
+	QImage img = toImage(pos.size());
+	painter->drawImage(pos, img);
 }

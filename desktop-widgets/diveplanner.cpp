@@ -607,13 +607,11 @@ void PlannerWidgets::printDecoPlan()
 	painter.setRenderHint(QPainter::Antialiasing);
 	painter.setRenderHint(QPainter::SmoothPixmapTransform);
 
-	ProfileWidget2 *profile = MainWindow::instance()->graphics;
-	QSize origSize = profile->size();
-	profile->resize(renderSize.toSize());
+	auto profile = std::make_unique<ProfileWidget2>(DivePlannerPointsModel::instance(), 1.0, nullptr);
+	profile->setPlanState(&displayed_dive, 0);
+	profile->plotDive(&displayed_dive, 0, true, true);
 	profile->setPrintMode(true);
-	profile->render(&painter);
-	profile->resize(origSize);
-	profile->setPrintMode(false);
+	profile->draw(&painter, QRect(0, 0, pixmap.width(), pixmap.height()));
 
 	QByteArray byteArray;
 	QBuffer buffer(&byteArray);

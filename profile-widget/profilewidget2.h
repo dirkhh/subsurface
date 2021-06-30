@@ -76,7 +76,7 @@ public:
 	};
 
 	// Pass null as plannerModel if no support for planning required
-	ProfileWidget2(DivePlannerPointsModel *plannerModel, QWidget *parent = 0);
+	ProfileWidget2(DivePlannerPointsModel *plannerModel, double fontPrintScale, QWidget *parent = 0);
 	~ProfileWidget2();
 	void resetZoom();
 	void scale(qreal sx, qreal sy);
@@ -87,17 +87,15 @@ public:
 	void setPrintMode(bool mode, bool grayscale = false);
 	bool isPointOutOfBoundaries(const QPointF &point) const;
 	bool isPlanner() const;
-	double getFontPrintScale() const;
-	void setFontPrintScale(double scale);
+	void draw(QPainter *painter, const QRect &pos);
+	QImage toImage(QSize size);
 #ifndef SUBSURFACE_MOBILE
 	bool eventFilter(QObject *, QEvent *) override;
 #endif
-	void setToolTipVisibile(bool visible);
 	State currentState;
 	int animSpeed;
 
 signals:
-	void fontPrintScaleChanged(double scale);
 	void editCurrentDive();
 
 public
