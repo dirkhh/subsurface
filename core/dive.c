@@ -1246,6 +1246,10 @@ static void fixup_dive_dc(struct dive *dive, struct divecomputer *dc)
 
 	/* Fixup CCR / PSCR dives with o2sensor values, but without no_o2sensors */
 	fixup_no_o2sensors(dc);
+
+	/* If there are no samples, generate a fake profile based on depth and time */
+	if (!dc->samples)
+		fake_dc(dc);
 }
 
 struct dive *fixup_dive(struct dive *dive)
@@ -2614,7 +2618,6 @@ struct dive *merge_dives(const struct dive *a, const struct dive *b, int offset,
 	MERGE_MAX(res, a, b, rating);
 	MERGE_TXT(res, a, b, suit, ", ");
 	MERGE_MAX(res, a, b, number);
-	MERGE_NONZERO(res, a, b, cns);
 	MERGE_NONZERO(res, a, b, visibility);
 	copy_pictures(a->pictures.nr ? &a->pictures : &b->pictures, &res->pictures);
 	taglist_merge(&res->tag_list, a->tag_list, b->tag_list);
@@ -2630,6 +2633,9 @@ struct dive *merge_dives(const struct dive *a, const struct dive *b, int offset,
 		interleave_dive_computers(res, &res->dc, &a->dc, &b->dc, cylinders_map_a, cylinders_map_b, offset);
 	else
 		join_dive_computers(res, &res->dc, &a->dc, &b->dc, cylinders_map_a, cylinders_map_b, 0);
+
+	/* The CNS values will be recalculated from the sample in fixup_dive() */
+	res->cns = res->maxcns = 0;
 
 	/* we take the first dive site, unless it's empty */
 	*site = a->dive_site && !dive_site_is_empty(a->dive_site) ? a->dive_site : b->dive_site;
